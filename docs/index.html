@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pimg demo</title>
+  <style>
+    * { margin: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    h1 { margin-bottom: 0.25rem; }
+    p { color: #666; margin-bottom: 1.5rem; }
+    p-img {
+      width: 100%;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>pimg</h1>
+  <p>Pinch to zoom on mobile. Try it on a touch device.</p>
+  <p-img src="https://picsum.photos/id/1015/800/600" alt="River through a valley"></p-img>
+  <script type="module" src="./pimg.js"></script>
+</body>
+</html>
