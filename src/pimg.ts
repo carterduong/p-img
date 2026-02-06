@@ -16,6 +16,10 @@ template.innerHTML = `
     width: 100%;
     height: 100%;
     object-fit: inherit;
+    object-position: inherit;
+    border-radius: inherit;
+    filter: inherit;
+    opacity: inherit;
     transform-origin: 0 0;
   }
   img.returning {
@@ -25,12 +29,14 @@ template.innerHTML = `
 <img part="img" />
 `;
 
-const OBSERVED_ATTRS = ["src", "alt", "loading", "crossorigin", "srcset", "sizes"];
+// Attributes that belong to the host and should NOT be forwarded to the inner <img>
+const HOST_ONLY_ATTRS = new Set([
+  "zooming", "style", "class", "id", "slot", "part", "is", "tabindex",
+]);
 
 export class PImg extends HTMLElement {
-  static observedAttributes = OBSERVED_ATTRS;
-
   private img: HTMLImageElement;
+  private attrObserver: MutationObserver;
   private scale = 1;
   private translateX = 0;
   private translateY = 0;
@@ -44,27 +50,62 @@ export class PImg extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
     this.img = this.shadowRoot!.querySelector("img")!;
+
+    // Observe all attribute mutations on the host and forward them to the inner <img>
+    this.attrObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === "attributes" && m.attributeName) {
+          this.forwardAttribute(m.attributeName);
+        }
+      }
+    });
   }
 
   connectedCallback() {
+    // Forward any attributes already present on the host
+    for (const attr of this.attributes) {
+      this.forwardAttribute(attr.name);
+    }
+
+    // Watch for future attribute changes
+    this.attrObserver.observe(this, { attributes: true });
+
+    // Re-dispatch non-bubbling <img> events so they're visible on the host
+    this.img.addEventListener("load", this.onImgLoad);
+    this.img.addEventListener("error", this.onImgError);
+
     this.addEventListener("touchstart", this.onTouchStart, { passive: false });
     this.addEventListener("touchmove", this.onTouchMove, { passive: false });
     this.addEventListener("touchend", this.onTouchEnd);
   }
 
   disconnectedCallback() {
+    this.attrObserver.disconnect();
+    this.img.removeEventListener("load", this.onImgLoad);
+    this.img.removeEventListener("error", this.onImgError);
     this.removeEventListener("touchstart", this.onTouchStart);
     this.removeEventListener("touchmove", this.onTouchMove);
     this.removeEventListener("touchend", this.onTouchEnd);
   }
 
-  attributeChangedCallback(name: string, _old: string | null, value: string | null) {
+  /** Forward a single attribute from the host to the inner <img>, unless it's host-only. */
+  private forwardAttribute(name: string) {
+    if (HOST_ONLY_ATTRS.has(name)) return;
+    const value = this.getAttribute(name);
     if (value === null) {
       this.img.removeAttribute(name);
     } else {
       this.img.setAttribute(name, value);
     }
   }
+
+  private onImgLoad = () => {
+    this.dispatchEvent(new Event("load"));
+  };
+
+  private onImgError = () => {
+    this.dispatchEvent(new Event("error"));
+  };
 
   private onTouchStart = (e: TouchEvent) => {
     if (e.touches.length === 2) {
