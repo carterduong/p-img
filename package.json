@@ -36,11 +36,11 @@
   "author": "carterduong",
   "repository": {
     "type": "git",
-    "url": "https://github.com/carterduong/pimg.git"
+    "url": "https://github.com/carterduong/p-img.git"
   },
-  "homepage": "https://github.com/carterduong/pimg",
+  "homepage": "https://github.com/carterduong/p-img",
   "bugs": {
-    "url": "https://github.com/carterduong/pimg/issues"
+    "url": "https://github.com/carterduong/p-img/issues"
   },
   "devDependencies": {
     "jsdom": "^28.0.0",
