@@ -1,16 +1,16 @@
 {
-  "name": "pimg",
+  "name": "p-img",
   "version": "0.1.0",
   "description": "A web component that adds pinch-to-zoom to images on mobile",
   "type": "module",
-  "main": "dist/pimg.umd.cjs",
-  "module": "dist/pimg.js",
-  "types": "dist/pimg.d.ts",
+  "main": "dist/p-img.umd.cjs",
+  "module": "dist/p-img.js",
+  "types": "dist/p-img.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/pimg.d.ts",
-      "import": "./dist/pimg.js",
-      "require": "./dist/pimg.umd.cjs"
+      "types": "./dist/p-img.d.ts",
+      "import": "./dist/p-img.js",
+      "require": "./dist/p-img.umd.cjs"
     }
   },
   "files": [
@@ -19,7 +19,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:pages": "npm run build && cp dist/pimg.js docs/pimg.js",
+    "build:pages": "npm run build && cp dist/p-img.js docs/p-img.js",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

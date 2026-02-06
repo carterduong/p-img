@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createTouchEvent, touch } from "./helpers/touch";
-import { PImg } from "../src/pimg";
+import { PImg } from "../src/p-img";
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [dts({ rollupTypes: true })],
   build: {
     lib: {
-      entry: resolve(__dirname, "src/pimg.ts"),
-      name: "pimg",
-      fileName: "pimg",
+      entry: resolve(__dirname, "src/p-img.ts"),
+      name: "p-img",
+      fileName: "p-img",
     },
   },
 });

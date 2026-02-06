@@ -1,4 +1,4 @@
-# pimg
+# p-img
 
 A lightweight web component that adds pinch-to-zoom to images on mobile.
 
@@ -7,14 +7,14 @@ A lightweight web component that adds pinch-to-zoom to images on mobile.
 ## Install
 
 ```bash
-npm install pimg
+npm install p-img
 ```
 
 ## Usage
 
 ```html
 <script type="module">
-  import "pimg";
+  import "p-img";
 </script>
 
 <p-img src="photo.jpg" alt="A zoomable photo"></p-img>
