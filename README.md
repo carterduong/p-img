@@ -1,8 +1,8 @@
-# p-img
+#p-img
 
 A lightweight web component that adds pinch-to-zoom to images on mobile.
 
-[Demo](https://carterduong.github.io/pimg/)
+[Demo](https://carterduong.github.io/p-img/)
 
 ## Install
 
