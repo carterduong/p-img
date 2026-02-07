@@ -1,4 +1,4 @@
-#p-img
+# p-img
 
 A lightweight web component that adds pinch-to-zoom to images on mobile.
 
