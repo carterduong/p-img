@@ -191,4 +191,21 @@ describe("Touch / Pinch-to-Zoom", () => {
 
     expect(img.style.transform).toBe("");
   });
+
+  it("single-touch touchstart does not call preventDefault (allows page scrolling)", () => {
+    const e = createTouchEvent("touchstart", [touch(50, 50)]);
+    const spy = vi.spyOn(e, "preventDefault");
+    el.dispatchEvent(e);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("single-touch touchmove does not call preventDefault (allows page scrolling)", () => {
+    const start = createTouchEvent("touchstart", [touch(50, 50, 0)]);
+    el.dispatchEvent(start);
+
+    const move = createTouchEvent("touchmove", [touch(80, 80, 0)]);
+    const spy = vi.spyOn(move, "preventDefault");
+    el.dispatchEvent(move);
+    expect(spy).not.toHaveBeenCalled();
+  });
 });

@@ -4,12 +4,13 @@ template.innerHTML = `
   :host {
     display: inline-block;
     overflow: hidden;
-    touch-action: none;
+    touch-action: pan-x pan-y;
   }
   :host([zooming]) {
     overflow: visible;
     z-index: 2147483647;
     position: relative;
+    touch-action: none;
   }
   img {
     display: block;
