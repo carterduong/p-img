@@ -12,6 +12,9 @@ template.innerHTML = `
     position: relative;
     touch-action: none;
   }
+  :host([zooming]) img {
+    will-change: transform;
+  }
   img {
     display: block;
     width: 100%;
@@ -45,6 +48,7 @@ export class PImg extends HTMLElement {
   private initialScale = 1;
   private initialMidpoint = { x: 0, y: 0 };
   private initialTranslate = { x: 0, y: 0 };
+  private cachedRect: DOMRect | null = null;
 
   constructor() {
     super();
@@ -120,6 +124,7 @@ export class PImg extends HTMLElement {
       this.readTransform();
 
       this.setAttribute("zooming", "");
+      this.cachedRect = this.getBoundingClientRect();
       this.initialDistance = this.getTouchDistance(e.touches);
       this.initialScale = this.scale;
       this.initialMidpoint = this.getTouchMidpoint(e.touches);
@@ -135,7 +140,7 @@ export class PImg extends HTMLElement {
       const newScale = Math.min(Math.max(this.initialScale * (distance / this.initialDistance), 1), 5);
 
       const midpoint = this.getTouchMidpoint(e.touches);
-      const rect = this.getBoundingClientRect();
+      const rect = this.cachedRect!;
 
       // Point in the element's coordinate space where the pinch started
       const originX = this.initialMidpoint.x - rect.left;
@@ -157,6 +162,7 @@ export class PImg extends HTMLElement {
 
   private onTouchEnd = (e: TouchEvent) => {
     if (e.touches.length < 2) {
+      this.cachedRect = null;
       this.animateReset();
     }
   };

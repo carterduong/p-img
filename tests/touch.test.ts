@@ -192,6 +192,21 @@ describe("Touch / Pinch-to-Zoom", () => {
     expect(img.style.transform).toBe("");
   });
 
+  it("getBoundingClientRect is called once at touchstart, not on every touchmove", () => {
+    const rectSpy = vi.spyOn(el, "getBoundingClientRect");
+
+    const start = createTouchEvent("touchstart", [touch(50, 50, 0), touch(100, 100, 1)]);
+    el.dispatchEvent(start);
+    expect(rectSpy).toHaveBeenCalledTimes(1);
+
+    // Multiple touchmove events should not trigger additional getBoundingClientRect calls
+    for (let i = 0; i < 5; i++) {
+      const move = createTouchEvent("touchmove", [touch(25 + i, 25 + i, 0), touch(125 + i, 125 + i, 1)]);
+      el.dispatchEvent(move);
+    }
+    expect(rectSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("single-touch touchstart does not call preventDefault (allows page scrolling)", () => {
     const e = createTouchEvent("touchstart", [touch(50, 50)]);
     const spy = vi.spyOn(e, "preventDefault");
