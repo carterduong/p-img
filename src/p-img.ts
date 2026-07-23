@@ -23,7 +23,6 @@ template.innerHTML = `
     object-position: inherit;
     border-radius: inherit;
     filter: inherit;
-    opacity: inherit;
     transform-origin: 0 0;
   }
   img.returning {
@@ -35,12 +34,20 @@ template.innerHTML = `
 
 // Attributes that belong to the host and should NOT be forwarded to the inner <img>
 const HOST_ONLY_ATTRS = new Set([
-  "zooming", "style", "class", "id", "slot", "part", "is", "tabindex",
+  "zooming", "loaded", "style", "class", "id", "slot", "part", "is", "tabindex",
 ]);
+
+// Source attributes whose change signals a pending new load
+const SOURCE_ATTRS = new Set(["src", "srcset", "sizes"]);
 
 export class PImg extends HTMLElement {
   private img: HTMLImageElement;
   private attrObserver: MutationObserver;
+
+  /** True when the current image has loaded successfully. */
+  get complete(): boolean {
+    return this.hasAttribute("loaded");
+  }
   private scale = 1;
   private translateX = 0;
   private translateY = 0;
@@ -60,6 +67,9 @@ export class PImg extends HTMLElement {
     this.attrObserver = new MutationObserver((mutations) => {
       for (const m of mutations) {
         if (m.type === "attributes" && m.attributeName) {
+          if (SOURCE_ATTRS.has(m.attributeName)) {
+            this.removeAttribute("loaded");
+          }
           this.forwardAttribute(m.attributeName);
         }
       }
@@ -106,11 +116,15 @@ export class PImg extends HTMLElement {
   }
 
   private onImgLoad = () => {
+    this.setAttribute("loaded", "");
     this.dispatchEvent(new Event("load", { bubbles: true }));
+    this.dispatchEvent(new CustomEvent("p-img-load", { bubbles: true, composed: true }));
   };
 
   private onImgError = () => {
+    this.removeAttribute("loaded");
     this.dispatchEvent(new Event("error", { bubbles: true }));
+    this.dispatchEvent(new CustomEvent("p-img-error", { bubbles: true, composed: true }));
   };
 
   private onTouchStart = (e: TouchEvent) => {
