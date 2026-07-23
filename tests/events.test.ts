@@ -83,14 +83,14 @@ describe("Event Re-dispatching", () => {
     const spy = vi.fn();
     el.addEventListener("load", spy);
 
-    // disconnect
+    // events still fire while detached
     el.remove();
     img.dispatchEvent(new Event("load"));
-    expect(spy).not.toHaveBeenCalled();
+    expect(spy).toHaveBeenCalledOnce();
 
-    // reconnect
+    // reconnecting must not stack a second internal listener
     document.body.appendChild(el);
     img.dispatchEvent(new Event("load"));
-    expect(spy).toHaveBeenCalledOnce();
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 });

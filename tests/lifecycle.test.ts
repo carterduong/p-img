@@ -21,7 +21,7 @@ describe("Lifecycle", () => {
     expect(img.getAttribute("data-x")).toBe("1");
   });
 
-  it("disconnectedCallback removes img event listeners", () => {
+  it("keeps tracking loads while detached", () => {
     const el = createElement();
     const img = getImg(el);
 
@@ -30,19 +30,35 @@ describe("Lifecycle", () => {
 
     el.remove(); // triggers disconnectedCallback
 
+    // A load finishing while detached still updates state and reaches
+    // listeners on the element itself
     img.dispatchEvent(new Event("load"));
-    expect(spy).not.toHaveBeenCalled();
+    expect(spy).toHaveBeenCalledOnce();
+    expect(el.hasAttribute("loaded")).toBe(true);
   });
 
-  it("disconnectedCallback stops MutationObserver", async () => {
+  it("forwards attribute changes made while detached", async () => {
     const el = createElement();
     const img = getImg(el);
 
     el.remove();
     el.setAttribute("data-test", "val");
     await tick();
-    // The observer was disconnected, so attr should NOT forward
-    expect(img.hasAttribute("data-test")).toBe(false);
+    expect(img.getAttribute("data-test")).toBe("val");
+  });
+
+  it("forwards attribute removals made while detached", async () => {
+    const el = createElement({ alt: "hello" });
+    const img = getImg(el);
+    await tick();
+    expect(img.getAttribute("alt")).toBe("hello");
+
+    el.remove();
+    el.removeAttribute("alt");
+    await tick();
+
+    document.body.appendChild(el);
+    expect(img.hasAttribute("alt")).toBe(false);
   });
 
   it("reconnecting restores all functionality", async () => {

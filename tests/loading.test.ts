@@ -89,6 +89,12 @@ describe("Loading State", () => {
     expect(el.complete).toBe(false);
   });
 
+  it("complete is false immediately after src change (synchronous)", () => {
+    img.dispatchEvent(new Event("load"));
+    el.setAttribute("src", "next.jpg");
+    expect(el.complete).toBe(false);
+  });
+
   // --- cached images ---
 
   it("catches load fired synchronously during connectedCallback (cached image)", () => {

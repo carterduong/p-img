@@ -128,6 +128,35 @@ describe("Attribute Forwarding", () => {
     expect(img.hasAttribute("is")).toBe(false);
   });
 
+  it("blocks exportparts", async () => {
+    el.setAttribute("exportparts", "img: photo");
+    await tick();
+    expect(img.hasAttribute("exportparts")).toBe(false);
+  });
+
+  // --- synchronous forwarding of source attrs ---
+
+  it("forwards src synchronously (no microtask wait)", () => {
+    el.setAttribute("src", "sync.jpg");
+    expect(img.getAttribute("src")).toBe("sync.jpg");
+  });
+
+  it("forwards srcset synchronously", () => {
+    el.setAttribute("srcset", "a.jpg 1x, b.jpg 2x");
+    expect(img.getAttribute("srcset")).toBe("a.jpg 1x, b.jpg 2x");
+  });
+
+  it("forwards sizes synchronously", () => {
+    el.setAttribute("sizes", "100vw");
+    expect(img.getAttribute("sizes")).toBe("100vw");
+  });
+
+  it("forwards src removal synchronously", () => {
+    el.setAttribute("src", "sync.jpg");
+    el.removeAttribute("src");
+    expect(img.hasAttribute("src")).toBe(false);
+  });
+
   // --- dynamic removal ---
 
   it("removes forwarded attribute when host attr is removed", async () => {

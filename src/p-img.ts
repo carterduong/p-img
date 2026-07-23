@@ -6,6 +6,9 @@ template.innerHTML = `
     overflow: hidden;
     touch-action: pan-x pan-y;
   }
+  :host([hidden]) {
+    display: none !important;
+  }
   :host([zooming]) {
     overflow: visible;
     z-index: 2147483647;
@@ -34,14 +37,28 @@ template.innerHTML = `
 
 // Attributes that belong to the host and should NOT be forwarded to the inner <img>
 const HOST_ONLY_ATTRS = new Set([
-  "zooming", "loaded", "style", "class", "id", "slot", "part", "is", "tabindex",
+  "zooming", "loaded", "style", "class", "id", "slot", "part", "exportparts",
+  "is", "tabindex",
 ]);
 
 // Source attributes whose change signals a pending new load
 const SOURCE_ATTRS = new Set(["src", "srcset", "sizes"]);
 
+// IDL properties that reflect to host attributes. Also used to re-apply
+// properties assigned before the element was upgraded.
+const REFLECTED_PROPS = [
+  "src", "srcset", "sizes", "alt", "loading", "decoding",
+  "crossOrigin", "referrerPolicy", "fetchPriority", "width", "height",
+] as const;
+
 export class PImg extends HTMLElement {
+  // Source attributes are handled in attributeChangedCallback so they forward
+  // synchronously and `complete` never lags a source change; all other
+  // attributes go through the MutationObserver.
+  static observedAttributes = ["src", "srcset", "sizes"];
+
   private img: HTMLImageElement;
+  private sizeStyle: HTMLStyleElement;
   private attrObserver: MutationObserver;
 
   /** True when the current image has loaded successfully. */
@@ -63,32 +80,52 @@ export class PImg extends HTMLElement {
     this.shadowRoot!.appendChild(template.content.cloneNode(true));
     this.img = this.shadowRoot!.querySelector("img")!;
 
-    // Observe all attribute mutations on the host and forward them to the inner <img>
+    // Per-instance style mirroring width/height attributes onto the host
+    this.sizeStyle = document.createElement("style");
+    this.shadowRoot!.appendChild(this.sizeStyle);
+
+    // Listen from construction so a load that finishes while the element is
+    // detached still updates state and reaches listeners on the element.
+    this.img.addEventListener("load", this.onImgLoad);
+    this.img.addEventListener("error", this.onImgError);
+
+    // Observe attribute mutations on the host and forward them to the inner
+    // <img>. Observation starts here rather than connectedCallback, and is
+    // never disconnected, so changes made while detached aren't lost.
     this.attrObserver = new MutationObserver((mutations) => {
       for (const m of mutations) {
         if (m.type === "attributes" && m.attributeName) {
-          if (SOURCE_ATTRS.has(m.attributeName)) {
-            this.removeAttribute("loaded");
-          }
+          // Source attrs are forwarded synchronously in attributeChangedCallback
+          if (SOURCE_ATTRS.has(m.attributeName)) continue;
           this.forwardAttribute(m.attributeName);
         }
       }
     });
+    this.attrObserver.observe(this, { attributes: true });
+  }
+
+  attributeChangedCallback(name: string) {
+    this.removeAttribute("loaded");
+    this.forwardAttribute(name);
   }
 
   connectedCallback() {
-    // Attach listeners before forwarding attributes so cached images don't fire
-    // load/error before we're ready to re-dispatch them.
-    this.img.addEventListener("load", this.onImgLoad);
-    this.img.addEventListener("error", this.onImgError);
+    // Re-apply properties assigned before the element was upgraded, so they
+    // go through the accessors instead of shadowing them.
+    for (const prop of REFLECTED_PROPS) {
+      if (Object.prototype.hasOwnProperty.call(this, prop)) {
+        const value = (this as any)[prop];
+        delete (this as any)[prop];
+        (this as any)[prop] = value;
+      }
+    }
 
-    // Forward any attributes already present on the host
+    // Forward attributes present at upgrade time — the observer only sees
+    // changes made after construction.
     for (const attr of this.attributes) {
       this.forwardAttribute(attr.name);
     }
-
-    // Watch for future attribute changes
-    this.attrObserver.observe(this, { attributes: true });
+    this.updateHostSizing();
 
     this.addEventListener("touchstart", this.onTouchStart, { passive: false });
     this.addEventListener("touchmove", this.onTouchMove, { passive: false });
@@ -96,12 +133,67 @@ export class PImg extends HTMLElement {
   }
 
   disconnectedCallback() {
-    this.attrObserver.disconnect();
-    this.img.removeEventListener("load", this.onImgLoad);
-    this.img.removeEventListener("error", this.onImgError);
     this.removeEventListener("touchstart", this.onTouchStart);
     this.removeEventListener("touchmove", this.onTouchMove);
     this.removeEventListener("touchend", this.onTouchEnd);
+  }
+
+  // --- HTMLImageElement API -------------------------------------------------
+
+  /** Resolved URL of the image source, like HTMLImageElement.src. */
+  get src(): string { return this.img.src; }
+  set src(value: string) { this.setAttribute("src", value); }
+
+  get srcset(): string { return this.getAttribute("srcset") ?? ""; }
+  set srcset(value: string) { this.setAttribute("srcset", value); }
+
+  get sizes(): string { return this.getAttribute("sizes") ?? ""; }
+  set sizes(value: string) { this.setAttribute("sizes", value); }
+
+  get alt(): string { return this.getAttribute("alt") ?? ""; }
+  set alt(value: string) { this.setForwarded("alt", value); }
+
+  get loading(): string { return this.getAttribute("loading") ?? "eager"; }
+  set loading(value: string) { this.setForwarded("loading", value); }
+
+  get decoding(): string { return this.getAttribute("decoding") ?? "auto"; }
+  set decoding(value: string) { this.setForwarded("decoding", value); }
+
+  get crossOrigin(): string | null { return this.getAttribute("crossorigin"); }
+  set crossOrigin(value: string | null) { this.setForwarded("crossorigin", value); }
+
+  get referrerPolicy(): string { return this.getAttribute("referrerpolicy") ?? ""; }
+  set referrerPolicy(value: string) { this.setForwarded("referrerpolicy", value); }
+
+  get fetchPriority(): string { return this.getAttribute("fetchpriority") ?? "auto"; }
+  set fetchPriority(value: string) { this.setForwarded("fetchpriority", value); }
+
+  get width(): number { return this.img.width; }
+  set width(value: number) { this.setForwarded("width", String(value)); }
+
+  get height(): number { return this.img.height; }
+  set height(value: number) { this.setForwarded("height", String(value)); }
+
+  get naturalWidth(): number { return this.img.naturalWidth; }
+  get naturalHeight(): number { return this.img.naturalHeight; }
+  get currentSrc(): string { return this.img.currentSrc; }
+
+  /** Decode the underlying image; resolves when it is safe to paint. */
+  decode(): Promise<void> {
+    return this.img.decode();
+  }
+
+  // --------------------------------------------------------------------------
+
+  /** Reflect a property to a host attribute and forward it synchronously —
+   *  the MutationObserver would otherwise apply it a microtask later. */
+  private setForwarded(name: string, value: string | null) {
+    if (value === null) {
+      this.removeAttribute(name);
+    } else {
+      this.setAttribute(name, value);
+    }
+    this.forwardAttribute(name);
   }
 
   /** Forward a single attribute from the host to the inner <img>, unless it's host-only. */
@@ -113,6 +205,22 @@ export class PImg extends HTMLElement {
     } else {
       this.img.setAttribute(name, value);
     }
+    if (name === "width" || name === "height") {
+      this.updateHostSizing();
+    }
+  }
+
+  /** Mirror width/height attributes onto the host, like <img>'s presentational
+   *  hints. The inner img's `width/height: 100%` CSS would otherwise discard
+   *  them, and the aspect-ratio reserves layout space before the image loads. */
+  private updateHostSizing() {
+    const w = this.getAttribute("width");
+    const h = this.getAttribute("height");
+    const rules: string[] = [];
+    if (w && /^\d+$/.test(w)) rules.push(`width: ${w}px;`);
+    if (h && /^\d+$/.test(h)) rules.push(`height: ${h}px;`);
+    if (rules.length === 2) rules.push(`aspect-ratio: ${w} / ${h};`);
+    this.sizeStyle.textContent = rules.length ? `:host { ${rules.join(" ")} }` : "";
   }
 
   private onImgLoad = () => {
@@ -231,6 +339,12 @@ export class PImg extends HTMLElement {
       this.translateX = v[4];
       this.translateY = v[5];
     }
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "p-img": PImg;
   }
 }
 

@@ -26,6 +26,10 @@ describe("Shadow DOM Styles", () => {
     expect(css).toMatch(/touch-action:\s*none/);
   });
 
+  it(":host([hidden]) has display:none so the hidden attribute works", () => {
+    expect(css).toMatch(/:host\(\[hidden\]\)\s*{\s*display:\s*none\s*!important/);
+  });
+
   // :host([zooming])
   it(":host([zooming]) has overflow:visible", () => {
     expect(css).toMatch(/overflow:\s*visible/);
