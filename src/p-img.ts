@@ -67,6 +67,11 @@ export class PImg extends HTMLElement {
   }
 
   connectedCallback() {
+    // Attach listeners before forwarding attributes so cached images don't fire
+    // load/error before we're ready to re-dispatch them.
+    this.img.addEventListener("load", this.onImgLoad);
+    this.img.addEventListener("error", this.onImgError);
+
     // Forward any attributes already present on the host
     for (const attr of this.attributes) {
       this.forwardAttribute(attr.name);
@@ -74,10 +79,6 @@ export class PImg extends HTMLElement {
 
     // Watch for future attribute changes
     this.attrObserver.observe(this, { attributes: true });
-
-    // Re-dispatch non-bubbling <img> events so they're visible on the host
-    this.img.addEventListener("load", this.onImgLoad);
-    this.img.addEventListener("error", this.onImgError);
 
     this.addEventListener("touchstart", this.onTouchStart, { passive: false });
     this.addEventListener("touchmove", this.onTouchMove, { passive: false });
@@ -105,11 +106,11 @@ export class PImg extends HTMLElement {
   }
 
   private onImgLoad = () => {
-    this.dispatchEvent(new Event("load"));
+    this.dispatchEvent(new Event("load", { bubbles: true }));
   };
 
   private onImgError = () => {
-    this.dispatchEvent(new Event("error"));
+    this.dispatchEvent(new Event("error", { bubbles: true }));
   };
 
   private onTouchStart = (e: TouchEvent) => {
